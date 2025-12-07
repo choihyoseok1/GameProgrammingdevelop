@@ -1,21 +1,18 @@
 import pygame
 import math
 
-# --- 설정값 (Configuration) ---
 WIDTH, HEIGHT = 1200, 800
 FPS = 60
 
-# [물리 환경 변수]
-GRAVITY = pygame.math.Vector2(0, 300) # 중력 가속도 (아래 방향)
-WIND_FORCE = pygame.math.Vector2(150, 0)  # 바람의 힘 (오른쪽으로)
+GRAVITY = pygame.math.Vector2(0, 300) 
+WIND_FORCE = pygame.math.Vector2(150, 0)  
 
-# 색상
 BLACK = (20, 20, 30)
 WHITE = (255, 255, 255)
 RED = (255, 100, 100)
 YELLOW = (255, 255, 0)
 BLUE = (100, 100, 255)
-WALL_COLOR = (180, 180, 180) # 벽 색상
+WALL_COLOR = (180, 180, 180)
 
 class Projectile:
     def __init__(self, x, y, angle, speed, radius, color, mass, drag_coefficient=0.005):
@@ -25,15 +22,13 @@ class Projectile:
         self.mass = mass
         self.drag_coefficient = drag_coefficient
         self.alive = True
-        self.path = [] # 궤적 점들을 저장할 리스트
-        self.penetrated_walls = [] # 관통한 벽을 기록하는 리스트
+        self.path = []
+        self.penetrated_walls = [] 
 
-        # 초기 속도
         rad = math.radians(angle)
         self.vel = pygame.math.Vector2(math.cos(rad), math.sin(rad)) * speed
         
-    def update(self, dt, walls): # walls 인자 추가
-        # 공기 저항 계산 (F_drag = -k * v^2)
+    def update(self, dt, walls): 
         speed = self.vel.length()
         drag_force = pygame.math.Vector2(0, 0)
         if speed > 0:
@@ -47,30 +42,27 @@ class Projectile:
         self.pos += self.vel * dt
         self.path.append(self.pos.copy())
             
-        # 벽 충돌 처리
         for wall in walls:
             proj_rect = self.get_rect()
             if proj_rect.colliderect(wall):
-                if self.mass <= 5.0:  # 가벼운 총알: 튕기기
+                if self.mass <= 5.0:  
                     overlap = proj_rect.clip(wall)
                     
-                    if overlap.width < overlap.height: # 수평 충돌 (좌/우)
+                    if overlap.width < overlap.height:
                         self.vel.x *= -0.85
                         if proj_rect.centerx < wall.centerx: self.pos.x -= overlap.width
                         else: self.pos.x += overlap.width
-                    else: # 수직 충돌 (상/하)
+                    else: 
                         self.vel.y *= -0.85
                         if proj_rect.centery < wall.centery: self.pos.y -= overlap.height
                         else: self.pos.y += overlap.height
                     
-                    break # 한 프레임에 한 벽만 충돌 처리
+                    break 
                 else:
-                    # 무거운 총알: 관통 시 속도 저하
                     if wall not in self.penetrated_walls:
-                        self.vel *= 0.6 # 속도를 60%로 줄임 (40% 감소)
+                        self.vel *= 0.6 
                         self.penetrated_walls.append(wall)
 
-        # 화면 밖으로 아주 멀리 나간 총알은 삭제 (메모리 관리)
         if not (-WIDTH/2 <= self.pos.x <= WIDTH * 1.5 and -HEIGHT/2 <= self.pos.y <= HEIGHT * 1.5):
             self.alive = False
 
@@ -94,9 +86,8 @@ def main():
     clock = pygame.time.Clock()
 
     projectiles = []
-    walls_enabled = True # 벽 활성화 상태를 저장하는 변수
+    walls_enabled = True 
 
-    # 벽 생성 (중앙에 구멍이 있는 형태)
     walls = [
         pygame.Rect(600, 0, 30, HEIGHT / 2 - 70),
         pygame.Rect(600, HEIGHT / 2 + 70, 30, HEIGHT - (HEIGHT / 2 + 70))
@@ -127,31 +118,25 @@ def main():
                     p = Projectile(start_pos.x, start_pos.y, angle, 700, 5, YELLOW, mass=1.0)
                     projectiles.append(p)
 
-        # Update
         active_walls = walls if walls_enabled else []
         for p in projectiles[:]:
-            p.update(dt, active_walls) # 활성화 상태에 따라 walls 전달
+            p.update(dt, active_walls) 
             if not p.alive:
                 projectiles.remove(p)
 
-        # Draw
         screen.fill(BLACK)
         
-        # 벽 그리기 (활성화된 경우에만)
         if walls_enabled:
             for wall in walls:
                 pygame.draw.rect(screen, WALL_COLOR, wall)
         
-        # 총알 그리기 및 궤적 표시
         for p in projectiles:
             if len(p.path) > 1:
                 pygame.draw.lines(screen, p.color, False, p.path, 1)
             p.draw(screen)
         
-        # 발사대
         pygame.draw.circle(screen, BLUE, (100, HEIGHT // 2), 20)
 
-        # UI Info
         font = pygame.font.SysFont("Arial", 16)
         controls_text = "LMB: Fire Heavy Bullet | RMB: Fire Light Bullet"
         screen.blit(font.render(controls_text, True, WHITE), (10, 10))
