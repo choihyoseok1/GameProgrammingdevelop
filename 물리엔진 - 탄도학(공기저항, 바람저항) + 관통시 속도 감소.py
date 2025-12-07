@@ -5,7 +5,7 @@ WIDTH, HEIGHT = 1200, 800
 FPS = 60
 
 GRAVITY = pygame.math.Vector2(0, 300) 
-WIND_FORCE = pygame.math.Vector2(150, 0)  
+WIND_VELOCITY = pygame.math.Vector2(150, 0)  
 
 BLACK = (20, 20, 30)
 WHITE = (255, 255, 255)
@@ -27,6 +27,7 @@ class Bullet:
 
         rad = math.radians(angle)
         self.vel = pygame.math.Vector2(math.cos(rad), math.sin(rad)) * speed
+        self.vel -= WIND_VELOCITY
         
     def update(self, dt, walls): 
         speed = self.vel.length()
@@ -35,8 +36,7 @@ class Bullet:
             drag_force = -self.vel.normalize() * self.drag_coefficient * speed**2
         
         drag_acceleration = drag_force / self.mass if self.mass > 0 else pygame.math.Vector2(0, 0)
-        wind_acceleration = WIND_FORCE / self.mass if self.mass > 0 else pygame.math.Vector2(0, 0)
-        total_acceleration = GRAVITY + drag_acceleration + wind_acceleration
+        total_acceleration = GRAVITY + drag_acceleration
         
         self.vel += total_acceleration * dt
         self.pos += self.vel * dt
@@ -102,7 +102,7 @@ def main():
     pygame.display.set_caption("Advanced Ballistics Simulation")
     clock = pygame.time.Clock()
 
-    projectiles = []
+    Bullets = []
     walls_enabled = True 
 
     walls = [
@@ -129,17 +129,17 @@ def main():
 
                 if event.button == 1:
                     p = Bullet(start_pos.x, start_pos.y, angle, 800, 10, RED, mass=10.0)
-                    projectiles.append(p)
+                    Bullets.append(p)
                 
                 elif event.button == 3:
                     p = Bullet(start_pos.x, start_pos.y, angle, 700, 5, YELLOW, mass=1.0)
-                    projectiles.append(p)
+                    Bullets.append(p)
 
         active_walls = walls if walls_enabled else []
-        for p in projectiles[:]:
+        for p in Bullets[:]:
             p.update(dt, active_walls) 
             if not p.alive:
-                projectiles.remove(p)
+                Bullets.remove(p)
 
         screen.fill(BLACK)
         
@@ -147,7 +147,7 @@ def main():
             for wall in walls:
                 pygame.draw.rect(screen, WALL_COLOR, wall)
         
-        for p in projectiles:
+        for p in Bullets:
             if len(p.path) > 1:
                 pygame.draw.lines(screen, p.color, False, p.path, 1)
             p.draw(screen)
@@ -158,10 +158,10 @@ def main():
         controls_text = "LMB: Fire Heavy Bullet | RMB: Fire Light Bullet"
         screen.blit(font.render(controls_text, True, WHITE), (10, 10))
         
-        info_text = f"Projectiles: {len(projectiles)}"
+        info_text = f"Bullets: {len(Bullets)}"
         screen.blit(font.render(info_text, True, WHITE), (10, 30))
         
-        wind_text = f"Wind Force: ({int(WIND_FORCE.x)}, {int(WIND_FORCE.y)})"
+        wind_text = f"Wind Velocity: ({int(WIND_VELOCITY.x)}, {int(WIND_VELOCITY.y)})"
         screen.blit(font.render(wind_text, True, WHITE), (10, 50))
 
         wall_status_text = f"Walls: {'ON' if walls_enabled else 'OFF'} (Press 'W' to toggle)"
