@@ -14,7 +14,7 @@ YELLOW = (255, 255, 0)
 BLUE = (100, 100, 255)
 WALL_COLOR = (180, 180, 180)
 
-class Projectile:
+class Bullet:
     def __init__(self, x, y, angle, speed, radius, color, mass, drag_coefficient=0.005):
         self.pos = pygame.math.Vector2(x, y)
         self.radius = radius
@@ -41,23 +41,40 @@ class Projectile:
         self.vel += total_acceleration * dt
         self.pos += self.vel * dt
         self.path.append(self.pos.copy())
-            
+
+        prev_pos = self.pos.copy()   
         for wall in walls:
             proj_rect = self.get_rect()
-            if proj_rect.colliderect(wall):
-                if self.mass <= 5.0:  
+            AABB_collision = proj_rect.colliderect(wall)
+            RayCast_collision = wall.clipline(prev_pos, self.pos)
+            if AABB_collision or RayCast_collision:
+                if RayCast_collision:
+                    self.pos = pygame.math.Vector2(RayCast_collision[0])
+                    proj_rect = self.get_rect()
+
+                if self.mass <= 5.0:
                     overlap = proj_rect.clip(wall)
-                    
-                    if overlap.width < overlap.height:
+                
+                    if overlap.width == 0 and overlap.height == 0:
+                        dx = abs(prev_pos.x - wall.centerx) - (wall.width / 2)
+                        dy = abs(prev_pos.y - wall.centery) - (wall.height / 2)
+                        if dx > dy: collision_side = 'x' 
+                        else: collision_side = 'y'
+                    elif overlap.width < overlap.height:
+                        collision_side = 'x'
+                    else:
+                        collision_side = 'y'
+
+                    if collision_side == 'x':
                         self.vel.x *= -0.85
-                        if proj_rect.centerx < wall.centerx: self.pos.x -= overlap.width
-                        else: self.pos.x += overlap.width
-                    else: 
+                        if self.pos.x < wall.centerx: self.pos.x -= 2
+                        else: self.pos.x += 2
+                    else:
                         self.vel.y *= -0.85
-                        if proj_rect.centery < wall.centery: self.pos.y -= overlap.height
-                        else: self.pos.y += overlap.height
-                    
-                    break 
+                        if self.pos.y < wall.centery: self.pos.y -= 2
+                        else: self.pos.y += 2
+
+                        break
                 else:
                     if wall not in self.penetrated_walls:
                         self.vel *= 0.6 
@@ -89,8 +106,8 @@ def main():
     walls_enabled = True 
 
     walls = [
-        pygame.Rect(600, 0, 30, HEIGHT / 2 - 70),
-        pygame.Rect(600, HEIGHT / 2 + 70, 30, HEIGHT - (HEIGHT / 2 + 70))
+        pygame.Rect(600, 0, 30, HEIGHT / 2),
+        pygame.Rect(600, HEIGHT / 2 , 30, HEIGHT - (HEIGHT / 2 ))
     ]
 
     running = True
@@ -111,11 +128,11 @@ def main():
                 angle = math.degrees(math.atan2(m_pos.y - start_pos.y, m_pos.x - start_pos.x))
 
                 if event.button == 1:
-                    p = Projectile(start_pos.x, start_pos.y, angle, 800, 10, RED, mass=10.0)
+                    p = Bullet(start_pos.x, start_pos.y, angle, 800, 10, RED, mass=10.0)
                     projectiles.append(p)
                 
                 elif event.button == 3:
-                    p = Projectile(start_pos.x, start_pos.y, angle, 700, 5, YELLOW, mass=1.0)
+                    p = Bullet(start_pos.x, start_pos.y, angle, 700, 5, YELLOW, mass=1.0)
                     projectiles.append(p)
 
         active_walls = walls if walls_enabled else []
