@@ -6,6 +6,8 @@ FPS = 60
 
 GRAVITY = pygame.math.Vector2(0, 300) 
 WIND_VELOCITY = pygame.math.Vector2(150, 0)  
+AIR_DENSITY = 1.225
+PIXEL_TO_METER = 0.01
 
 BLACK = (20, 20, 30)
 WHITE = (255, 255, 255)
@@ -15,25 +17,28 @@ BLUE = (100, 100, 255)
 WALL_COLOR = (180, 180, 180)
 
 class Bullet:
-    def __init__(self, x, y, angle, speed, radius, color, mass, drag_coefficient=0.005):
+    def __init__(self, x, y, angle, speed, radius, color, mass, Cd=0.295):
         self.pos = pygame.math.Vector2(x, y)
         self.radius = radius
         self.color = color
         self.mass = mass
-        self.drag_coefficient = drag_coefficient
+        self.Cd = Cd
         self.alive = True
         self.path = []
         self.penetrated_walls = [] 
 
         rad = math.radians(angle)
         self.vel = pygame.math.Vector2(math.cos(rad), math.sin(rad)) * speed
+        r_meters = self.radius * PIXEL_TO_METER 
+        area = math.pi * (r_meters ** 2)
+        self.aerodynamic_k = 0.5 * AIR_DENSITY * self.Cd * area
         self.vel -= WIND_VELOCITY
         
     def update(self, dt, walls): 
         speed = self.vel.length()
         drag_force = pygame.math.Vector2(0, 0)
         if speed > 0:
-            drag_force = -self.vel.normalize() * self.drag_coefficient * speed**2
+            drag_force = -self.vel.normalize() * self.aerodynamic_k * speed**2
         
         drag_acceleration = drag_force / self.mass if self.mass > 0 else pygame.math.Vector2(0, 0)
         total_acceleration = GRAVITY + drag_acceleration
